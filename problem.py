@@ -129,30 +129,13 @@ def _read_data(path, train_or_test="train"):
     return X, np.array(y, dtype=list)
 
 
-def is_iterable(obj):
-    """To check if an object is iterable."""
-    try:
-        iter(obj)
-    except Exception:
-        return False
-    else:
-        return True
-
 # --------------------------------------
 # 2) Object implementing the score type
 # --------------------------------------
 
 
-def pairwise(iterable):
-    """s -> (s0,s1), (s1,s2), (s2, s3), ..."""
-    a, b = tee(iterable)
-    next(b, None)
-    return zip(a, b)
-
-
 def _check_step_list(step_list):
     """Some sanity checks."""
-
     for step in step_list:
         assert len(
             step) == 2, f"A step consists of a start and an end: {step}."
