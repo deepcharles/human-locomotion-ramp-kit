@@ -7,7 +7,6 @@ from os.path import join as pjoin
 
 import numpy as np
 import pandas as pd
-
 from rampwf.prediction_types.base import BasePrediction
 from rampwf.score_types import BaseScoreType
 from rampwf.workflows import Estimator
@@ -24,7 +23,7 @@ RANDOM_STATE = 777
 @dataclass
 class WalkSignal:
     """Wrapper class around a numpy array containing a walk signal (with metadata)"""
-    code: str
+    trial_code: str
     age: int
     gender: str
     height: float
@@ -49,7 +48,7 @@ class WalkSignal:
         right_foot_cols = ["RAV", "RAX", "RAY",
                            "RAZ", "RRV", "RRX", "RRY", "RRZ"]
 
-        left_foot = cls(code=code,
+        left_foot = cls(trial_code=code,
                         age=metadata["Age"],
                         gender=metadata["Gender"],
                         height=metadata["Height"],
@@ -61,7 +60,7 @@ class WalkSignal:
                         is_control=metadata["IsControl"],
                         foot="Left",
                         signal=signal[left_foot_cols].rename(columns=lambda name: name[1:]))
-        right_foot = cls(code=code,
+        right_foot = cls(trial_code=code,
                          age=metadata["Age"],
                          gender=metadata["Gender"],
                          height=metadata["Height"],
@@ -330,9 +329,9 @@ def get_cv(X, y):
     """
     In this cross-validation scheme, for a single trial, the left and right signals are
     not in different folds and test/train sets, therefore the cross-validation is
-    stratified according to the `code` attribute.
+    stratified according to the `trial_code` attribute.
     """
     cv = GroupShuffleSplit(
         n_splits=5, test_size=0.2, random_state=RANDOM_STATE)
-    code_list = [signal.code for signal in X]
+    code_list = [signal.trial_code for signal in X]
     return cv.split(X, y, code_list)
