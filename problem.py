@@ -160,13 +160,12 @@ def inter_over_union(interval_1, interval_2):
 
 def _step_detection_precision(step_list_true, step_list_pred):
     """Precision is the number of correctly predicted steps divided by the number of predicted
-    steps. A predicted step is counted as correct if its mid-index (mean of its start and end
-    indexes) lies inside an annotated step.
+    steps. A predicted step is counted as correct if it overlaps an annotated step (measured by the
+    "intersection over union" metric) by more than 75%.
     Note that an annotated step can only be detected once. If several predicted steps correspond
     to the same annotated step, all but one are considered as false.
     Here, precision is computed on a single prediction task (all steps correspond to the same
     signal).
-
     The lists y_true_ and y_pred are lists of steps, for instance:
         - step_list_true: [[357, 431], [502, 569], [633, 715], [778, 849], [907, 989]]
         - step_list_pred: [[293, 365], [422, 508], [565, 642], [701, 789]]
