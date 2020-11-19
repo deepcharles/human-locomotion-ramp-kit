@@ -146,6 +146,18 @@ def _check_step_list(step_list):
     assert start_1 < end_1, f"start should be before end: {step_1}."
 
 
+def inter_over_union(interval_1, interval_2):
+    """Intersection over union for two intervals."""
+    a, b = interval_1
+    c, d = interval_2
+    intersection = max(0, min(b, d) - max(a, c))
+    if intersection > 0:
+        union = max(b, d) - min(a, c)
+    else:
+        union = (b - a) + (d - c)
+    return intersection / union
+
+
 def _step_detection_precision(step_list_true, step_list_pred):
     """Precision is the number of correctly predicted steps divided by the number of predicted
     steps. A predicted step is counted as correct if its mid-index (mean of its start and end
