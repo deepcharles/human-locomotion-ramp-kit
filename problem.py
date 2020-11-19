@@ -13,6 +13,7 @@ from sklearn.model_selection import GroupShuffleSplit
 
 DATA_HOME = "data"
 RANDOM_STATE = 777
+THRESHOLD_IoU = 0.75
 rng = np.random.RandomState(RANDOM_STATE)
 
 # --------------------------------------
@@ -23,6 +24,7 @@ rng = np.random.RandomState(RANDOM_STATE)
 @dataclass
 class WalkSignal:
     """Wrapper class around a numpy array containing a walk signal (with metadata)"""
+
     trial_code: str
     age: int
     gender: str
@@ -43,35 +45,37 @@ class WalkSignal:
             metadata = json.load(file_handle)
         signal = pd.read_csv(fname + ".csv", sep=",")  # left and right feet
 
-        left_foot_cols = ["LAV", "LAX", "LAY",
-                          "LAZ", "LRV", "LRX", "LRY", "LRZ"]
-        right_foot_cols = ["RAV", "RAX", "RAY",
-                           "RAZ", "RRV", "RRX", "RRY", "RRZ"]
+        left_foot_cols = ["LAV", "LAX", "LAY", "LAZ", "LRV", "LRX", "LRY", "LRZ"]
+        right_foot_cols = ["RAV", "RAX", "RAY", "RAZ", "RRV", "RRX", "RRY", "RRZ"]
 
-        left_foot = cls(trial_code=code,
-                        age=metadata["Age"],
-                        gender=metadata["Gender"],
-                        height=metadata["Height"],
-                        weight=metadata["Weight"],
-                        bmi=metadata["BMI"],
-                        laterality=metadata["Laterality"],
-                        sensor=metadata["Sensor"],
-                        pathology_group=metadata["PathologyGroup"],
-                        is_control=metadata["IsControl"],
-                        foot="Left",
-                        signal=signal[left_foot_cols].rename(columns=lambda name: name[1:]))
-        right_foot = cls(trial_code=code,
-                         age=metadata["Age"],
-                         gender=metadata["Gender"],
-                         height=metadata["Height"],
-                         weight=metadata["Weight"],
-                         bmi=metadata["BMI"],
-                         laterality=metadata["Laterality"],
-                         sensor=metadata["Sensor"],
-                         pathology_group=metadata["PathologyGroup"],
-                         is_control=metadata["IsControl"],
-                         foot="Right",
-                         signal=signal[right_foot_cols].rename(columns=lambda name: name[1:]))
+        left_foot = cls(
+            trial_code=code,
+            age=metadata["Age"],
+            gender=metadata["Gender"],
+            height=metadata["Height"],
+            weight=metadata["Weight"],
+            bmi=metadata["BMI"],
+            laterality=metadata["Laterality"],
+            sensor=metadata["Sensor"],
+            pathology_group=metadata["PathologyGroup"],
+            is_control=metadata["IsControl"],
+            foot="Left",
+            signal=signal[left_foot_cols].rename(columns=lambda name: name[1:]),
+        )
+        right_foot = cls(
+            trial_code=code,
+            age=metadata["Age"],
+            gender=metadata["Gender"],
+            height=metadata["Height"],
+            weight=metadata["Weight"],
+            bmi=metadata["BMI"],
+            laterality=metadata["Laterality"],
+            sensor=metadata["Sensor"],
+            pathology_group=metadata["PathologyGroup"],
+            is_control=metadata["IsControl"],
+            foot="Right",
+            signal=signal[right_foot_cols].rename(columns=lambda name: name[1:]),
+        )
 
         return left_foot, right_foot
 
@@ -107,10 +111,11 @@ def _read_data(path, train_or_test="train"):
         [tupe(List[WalkSignal], List)] -- (list of signals, list of lists of steps)
     """
     folder = pjoin(path, DATA_HOME, train_or_test)
-    code_list = [fname.split(".")[0] for fname in os.listdir(
-        folder) if fname.endswith(".csv")]
+    code_list = [
+        fname.split(".")[0] for fname in os.listdir(folder) if fname.endswith(".csv")
+    ]
 
-    test = os.getenv('RAMP_TEST_MODE', 0)  # are we in test mode
+    test = os.getenv("RAMP_TEST_MODE", 0)  # are we in test mode
     if test:
         code_sublist = rng.choice(code_list, 5, replace=False)
     else:
@@ -177,7 +182,6 @@ def _step_detection_precision(step_list_true, step_list_pred):
     Returns:
         float -- precision, between 0.0 and 1.0
     """
-    _check_step_list(step_list_true)
     _check_step_list(step_list_pred)
 
     if len(step_list_pred) == 0:  # empty prediction
@@ -265,13 +269,13 @@ class FScoreStepDetection(BaseScoreType):
 
         return np.mean(fscore_list)
 
+
 # --------------------------------------
 # 3) Prediction types
 # --------------------------------------
 
 
 class _Predictions(BasePrediction):
-
     def __init__(self, y_pred=None, y_true=None, n_samples=None):
         """Essentially the same as in a regression task, but the prediction is a list not a float."""
         if y_pred is not None:
@@ -280,12 +284,11 @@ class _Predictions(BasePrediction):
             self.y_pred = np.array(y_true, dtype=list)
         elif n_samples is not None:
             # self.n_columns == 0:
-            shape = (n_samples)
+            shape = n_samples
             self.y_pred = np.empty(shape, dtype=list)
             self.y_pred.fill(np.nan)
         else:
-            raise ValueError(
-                'Missing init argument: y_pred, y_true, or n_samples')
+            raise ValueError("Missing init argument: y_pred, y_true, or n_samples")
         self.check_y_pred_dimensions()
 
     @property
@@ -296,7 +299,7 @@ class _Predictions(BasePrediction):
         elif len(self.y_pred.shape) == 2:
             return ~pd.isnull(self.y_pred[:, 0])
         else:
-            raise ValueError('y_pred.shape > 2 is not implemented')
+            raise ValueError("y_pred.shape > 2 is not implemented")
 
     def check_y_pred_dimensions(self):
         pass
@@ -311,6 +314,7 @@ class _Predictions(BasePrediction):
 def make_step_detection():
     return _Predictions
 
+
 # --------------------------------------
 # 4) Ramp problem definition
 # --------------------------------------
@@ -323,11 +327,11 @@ score_types = [FScoreStepDetection(name="F-score (step detection)")]
 
 
 def get_train_data(path="."):
-    return _read_data(path, 'train')
+    return _read_data(path, "train")
 
 
 def get_test_data(path="."):
-    return _read_data(path, 'test')
+    return _read_data(path, "test")
 
 
 def get_cv(X, y):
@@ -336,7 +340,6 @@ def get_cv(X, y):
     not in different folds and test/train sets, therefore the cross-validation is
     stratified according to the `trial_code` attribute.
     """
-    cv = GroupShuffleSplit(
-        n_splits=5, test_size=0.2, random_state=RANDOM_STATE)
+    cv = GroupShuffleSplit(n_splits=5, test_size=0.2, random_state=RANDOM_STATE)
     code_list = [signal.trial_code for signal in X]
     return cv.split(X, y, code_list)
