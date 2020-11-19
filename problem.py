@@ -186,20 +186,19 @@ def _step_detection_precision(step_list_true, step_list_pred):
 
     n_correctly_predicted = 0
     detected_index_set = set()  # set of index of detected true steps
-    for (start_pred, end_pred) in step_list_pred:
-        mid = (start_pred + end_pred) // 2
-        for (index, (start_true, end_true)) in enumerate(step_list_true):
-            if (index not in detected_index_set) and (start_true <= mid < end_true):
+    for step_pred in step_list_pred:
+        for (index, step_true) in enumerate(step_list_true):
+            if inter_over_union(step_pred, step_true) > THRESHOLD_IoU:
                 n_correctly_predicted += 1
                 detected_index_set.add(index)
                 break
-
     return n_correctly_predicted / len(step_list_pred)
 
 
 def _step_detection_recall(step_list_true, step_list_pred):
     """Recall is the number of detected annotated steps divided by the total number of annotated
-    steps. An annotated step is counted as detected if its mid-index lies inside a predicted step.
+    steps. An annotated step is counted as detected if it overlaps a predicted step (measured by
+    the "intersection over union" metric) by more than 75%.
     Note that an annotated step can only be detected once. If several annotated steps are detected
     with the same predicted step, all but one are considered undetected.
     Here, recall is computed on a single prediction task (all steps correspond to the same
@@ -216,16 +215,14 @@ def _step_detection_recall(step_list_true, step_list_pred):
     Returns:
         float -- recall, between 0.0 and 1.0
     """
-    _check_step_list(step_list_true)
     _check_step_list(step_list_pred)
 
     n_detected_true = 0
     predicted_index_set = set()  # set of indexes of predicted steps
 
-    for (start_true, end_true) in step_list_true:
-        mid = (start_true + end_true) // 2
-        for (index, (start_pred, end_pred)) in enumerate(step_list_pred):
-            if (index not in predicted_index_set) and (start_pred <= mid < end_pred):
+    for step_true in step_list_true:
+        for (index, step_pred) in enumerate(step_list_pred):
+            if inter_over_union(step_pred, step_true) > THRESHOLD_IoU:
                 n_detected_true += 1
                 predicted_index_set.add(index)
                 break
