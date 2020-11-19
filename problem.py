@@ -191,7 +191,9 @@ def _step_detection_precision(step_list_true, step_list_pred):
     detected_index_set = set()  # set of index of detected true steps
     for step_pred in step_list_pred:
         for (index, step_true) in enumerate(step_list_true):
-            if (index not in detected_index_set) and (inter_over_union(step_pred, step_true) > THRESHOLD_IoU):
+            if (index not in detected_index_set) and (
+                inter_over_union(step_pred, step_true) > THRESHOLD_IoU
+            ):
                 n_correctly_predicted += 1
                 detected_index_set.add(index)
                 break
@@ -225,7 +227,9 @@ def _step_detection_recall(step_list_true, step_list_pred):
 
     for step_true in step_list_true:
         for (index, step_pred) in enumerate(step_list_pred):
-            if (index not in predicted_index_set) and (inter_over_union(step_pred, step_true) > THRESHOLD_IoU):
+            if (index not in predicted_index_set) and (
+                inter_over_union(step_pred, step_true) > THRESHOLD_IoU
+            ):
                 n_detected_true += 1
                 predicted_index_set.add(index)
                 break
