@@ -139,17 +139,10 @@ def _read_data(path, train_or_test="train"):
 
 def _check_step_list(step_list):
     """Some sanity checks. (step_list is assumed to be sorted."""
-    for step_1, step_2 in zip(step_list, step_list[1:]):
-        assert len(step_1) == 2, f"A step consists of a start and an end: {step_1}."
-        start_1, end_1 = step_1
-        assert start_1 < end_1, f"start should be before end: {step_1}."
-        start_2, end_2 = step_2
-        assert end_1 < start_2, f"Steps should not overlap: {step_1}, {step_2}."
-    # check the last step
-    step_1 = step_list[-1]
-    start_1, end_1 = step_1
-    assert start_1 < end_1, f"start should be before end: {step_1}."
-
+    for step in step_list:
+        assert len(step) == 2, f"A step consists of a start and an end: {step}."
+        start, end = step
+        assert start < end, f"start should be before end: {step}."
 
 def inter_over_union(interval_1, interval_2):
     """Intersection over union for two intervals."""
