@@ -45,8 +45,26 @@ class WalkSignal:
             metadata = json.load(file_handle)
         signal = pd.read_csv(fname + ".csv", sep=",")  # left and right feet
 
-        left_foot_cols = ["LAV", "LAX", "LAY", "LAZ", "LRV", "LRX", "LRY", "LRZ"]
-        right_foot_cols = ["RAV", "RAX", "RAY", "RAZ", "RRV", "RRX", "RRY", "RRZ"]
+        left_foot_cols = [
+            "LAV",
+            "LAX",
+            "LAY",
+            "LAZ",
+            "LRV",
+            "LRX",
+            "LRY",
+            "LRZ",
+        ]
+        right_foot_cols = [
+            "RAV",
+            "RAX",
+            "RAY",
+            "RAZ",
+            "RRV",
+            "RRX",
+            "RRY",
+            "RRZ",
+        ]
 
         left_foot = cls(
             trial_code=code,
@@ -74,7 +92,9 @@ class WalkSignal:
             pathology_group=metadata["PathologyGroup"],
             is_control=metadata["IsControl"],
             foot="Right",
-            signal=signal[right_foot_cols].rename(columns=lambda name: name[1:]),
+            signal=signal[right_foot_cols].rename(
+                columns=lambda name: name[1:]
+            ),
         )
 
         return left_foot, right_foot
@@ -112,7 +132,9 @@ def _read_data(path, train_or_test="train"):
     """
     folder = pjoin(path, DATA_HOME, train_or_test)
     code_list = [
-        fname.split(".")[0] for fname in os.listdir(folder) if fname.endswith(".csv")
+        fname.split(".")[0]
+        for fname in os.listdir(folder)
+        if fname.endswith(".csv")
     ]
 
     test = os.getenv("RAMP_TEST_MODE", 0)  # are we in test mode
@@ -143,6 +165,7 @@ def _check_step_list(step_list):
         assert len(step) == 2, f"A step consists of a start and an end: {step}."
         start, end = step
         assert start < end, f"start should be before end: {step}."
+
 
 def inter_over_union(interval_1, interval_2):
     """Intersection over union for two intervals."""
@@ -254,6 +277,10 @@ class FScoreStepDetection(BaseScoreType):
         Returns:
             float -- f-score, between 0.0 and 1.0
         """
+        # to prevent throwing an exception when passing empty lists
+        if len(y_true) == 0:
+            return 0
+
         fscore_list = list()
 
         for (step_list_true, step_list_pred) in zip(y_true, y_pred):
@@ -285,7 +312,9 @@ class _Predictions(BasePrediction):
             self.y_pred = np.empty(shape, dtype=list)
             self.y_pred.fill(np.nan)
         else:
-            raise ValueError("Missing init argument: y_pred, y_true, or n_samples")
+            raise ValueError(
+                "Missing init argument: y_pred, y_true, or n_samples"
+            )
         self.check_y_pred_dimensions()
 
     @property
