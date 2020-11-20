@@ -13,6 +13,7 @@ from sklearn.model_selection import GroupShuffleSplit
 
 DATA_HOME = "data"
 RANDOM_STATE = 777
+THRESHOLD_IoU = 0.75
 rng = np.random.RandomState(RANDOM_STATE)
 
 # --------------------------------------
@@ -23,6 +24,7 @@ rng = np.random.RandomState(RANDOM_STATE)
 @dataclass
 class WalkSignal:
     """Wrapper class around a numpy array containing a walk signal (with metadata)"""
+
     trial_code: str
     age: int
     gender: str
@@ -43,35 +45,57 @@ class WalkSignal:
             metadata = json.load(file_handle)
         signal = pd.read_csv(fname + ".csv", sep=",")  # left and right feet
 
-        left_foot_cols = ["LAV", "LAX", "LAY",
-                          "LAZ", "LRV", "LRX", "LRY", "LRZ"]
-        right_foot_cols = ["RAV", "RAX", "RAY",
-                           "RAZ", "RRV", "RRX", "RRY", "RRZ"]
+        left_foot_cols = [
+            "LAV",
+            "LAX",
+            "LAY",
+            "LAZ",
+            "LRV",
+            "LRX",
+            "LRY",
+            "LRZ",
+        ]
+        right_foot_cols = [
+            "RAV",
+            "RAX",
+            "RAY",
+            "RAZ",
+            "RRV",
+            "RRX",
+            "RRY",
+            "RRZ",
+        ]
 
-        left_foot = cls(trial_code=code,
-                        age=metadata["Age"],
-                        gender=metadata["Gender"],
-                        height=metadata["Height"],
-                        weight=metadata["Weight"],
-                        bmi=metadata["BMI"],
-                        laterality=metadata["Laterality"],
-                        sensor=metadata["Sensor"],
-                        pathology_group=metadata["PathologyGroup"],
-                        is_control=metadata["IsControl"],
-                        foot="Left",
-                        signal=signal[left_foot_cols].rename(columns=lambda name: name[1:]))
-        right_foot = cls(trial_code=code,
-                         age=metadata["Age"],
-                         gender=metadata["Gender"],
-                         height=metadata["Height"],
-                         weight=metadata["Weight"],
-                         bmi=metadata["BMI"],
-                         laterality=metadata["Laterality"],
-                         sensor=metadata["Sensor"],
-                         pathology_group=metadata["PathologyGroup"],
-                         is_control=metadata["IsControl"],
-                         foot="Right",
-                         signal=signal[right_foot_cols].rename(columns=lambda name: name[1:]))
+        left_foot = cls(
+            trial_code=code,
+            age=metadata["Age"],
+            gender=metadata["Gender"],
+            height=metadata["Height"],
+            weight=metadata["Weight"],
+            bmi=metadata["BMI"],
+            laterality=metadata["Laterality"],
+            sensor=metadata["Sensor"],
+            pathology_group=metadata["PathologyGroup"],
+            is_control=metadata["IsControl"],
+            foot="Left",
+            signal=signal[left_foot_cols].rename(columns=lambda name: name[1:]),
+        )
+        right_foot = cls(
+            trial_code=code,
+            age=metadata["Age"],
+            gender=metadata["Gender"],
+            height=metadata["Height"],
+            weight=metadata["Weight"],
+            bmi=metadata["BMI"],
+            laterality=metadata["Laterality"],
+            sensor=metadata["Sensor"],
+            pathology_group=metadata["PathologyGroup"],
+            is_control=metadata["IsControl"],
+            foot="Right",
+            signal=signal[right_foot_cols].rename(
+                columns=lambda name: name[1:]
+            ),
+        )
 
         return left_foot, right_foot
 
@@ -107,10 +131,13 @@ def _read_data(path, train_or_test="train"):
         [tupe(List[WalkSignal], List)] -- (list of signals, list of lists of steps)
     """
     folder = pjoin(path, DATA_HOME, train_or_test)
-    code_list = [fname.split(".")[0] for fname in os.listdir(
-        folder) if fname.endswith(".csv")]
+    code_list = [
+        fname.split(".")[0]
+        for fname in os.listdir(folder)
+        if fname.endswith(".csv")
+    ]
 
-    test = os.getenv('RAMP_TEST_MODE', 0)  # are we in test mode
+    test = os.getenv("RAMP_TEST_MODE", 0)  # are we in test mode
     if test:
         code_sublist = rng.choice(code_list, 5, replace=False)
     else:
@@ -135,21 +162,31 @@ def _read_data(path, train_or_test="train"):
 def _check_step_list(step_list):
     """Some sanity checks."""
     for step in step_list:
-        assert len(
-            step) == 2, f"A step consists of a start and an end: {step}."
+        assert len(step) == 2, f"A step consists of a start and an end: {step}."
         start, end = step
         assert start < end, f"start should be before end: {step}."
 
 
+def inter_over_union(interval_1, interval_2):
+    """Intersection over union for two intervals."""
+    a, b = interval_1
+    c, d = interval_2
+    intersection = max(0, min(b, d) - max(a, c))
+    if intersection > 0:
+        union = max(b, d) - min(a, c)
+    else:
+        union = (b - a) + (d - c)
+    return intersection / union
+
+
 def _step_detection_precision(step_list_true, step_list_pred):
     """Precision is the number of correctly predicted steps divided by the number of predicted
-    steps. A predicted step is counted as correct if its mid-index (mean of its start and end
-    indexes) lies inside an annotated step.
+    steps. A predicted step is counted as correct if it overlaps an annotated step (measured by the
+    "intersection over union" metric) by more than 75%.
     Note that an annotated step can only be detected once. If several predicted steps correspond
     to the same annotated step, all but one are considered as false.
     Here, precision is computed on a single prediction task (all steps correspond to the same
     signal).
-
     The lists y_true_ and y_pred are lists of steps, for instance:
         - step_list_true: [[357, 431], [502, 569], [633, 715], [778, 849], [907, 989]]
         - step_list_pred: [[293, 365], [422, 508], [565, 642], [701, 789]]
@@ -161,7 +198,6 @@ def _step_detection_precision(step_list_true, step_list_pred):
     Returns:
         float -- precision, between 0.0 and 1.0
     """
-    _check_step_list(step_list_true)
     _check_step_list(step_list_pred)
 
     if len(step_list_pred) == 0:  # empty prediction
@@ -169,20 +205,21 @@ def _step_detection_precision(step_list_true, step_list_pred):
 
     n_correctly_predicted = 0
     detected_index_set = set()  # set of index of detected true steps
-    for (start_pred, end_pred) in step_list_pred:
-        mid = (start_pred + end_pred) // 2
-        for (index, (start_true, end_true)) in enumerate(step_list_true):
-            if (index not in detected_index_set) and (start_true <= mid < end_true):
+    for step_pred in step_list_pred:
+        for (index, step_true) in enumerate(step_list_true):
+            if (index not in detected_index_set) and (
+                inter_over_union(step_pred, step_true) > THRESHOLD_IoU
+            ):
                 n_correctly_predicted += 1
                 detected_index_set.add(index)
                 break
-
     return n_correctly_predicted / len(step_list_pred)
 
 
 def _step_detection_recall(step_list_true, step_list_pred):
     """Recall is the number of detected annotated steps divided by the total number of annotated
-    steps. An annotated step is counted as detected if its mid-index lies inside a predicted step.
+    steps. An annotated step is counted as detected if it overlaps a predicted step (measured by
+    the "intersection over union" metric) by more than 75%.
     Note that an annotated step can only be detected once. If several annotated steps are detected
     with the same predicted step, all but one are considered undetected.
     Here, recall is computed on a single prediction task (all steps correspond to the same
@@ -199,16 +236,16 @@ def _step_detection_recall(step_list_true, step_list_pred):
     Returns:
         float -- recall, between 0.0 and 1.0
     """
-    _check_step_list(step_list_true)
     _check_step_list(step_list_pred)
 
     n_detected_true = 0
     predicted_index_set = set()  # set of indexes of predicted steps
 
-    for (start_true, end_true) in step_list_true:
-        mid = (start_true + end_true) // 2
-        for (index, (start_pred, end_pred)) in enumerate(step_list_pred):
-            if (index not in predicted_index_set) and (start_pred <= mid < end_pred):
+    for step_true in step_list_true:
+        for (index, step_pred) in enumerate(step_list_pred):
+            if (index not in predicted_index_set) and (
+                inter_over_union(step_pred, step_true) > THRESHOLD_IoU
+            ):
                 n_detected_true += 1
                 predicted_index_set.add(index)
                 break
@@ -240,6 +277,10 @@ class FScoreStepDetection(BaseScoreType):
         Returns:
             float -- f-score, between 0.0 and 1.0
         """
+        # to prevent throwing an exception when passing empty lists
+        if len(y_true) == 0:
+            return 0
+
         fscore_list = list()
 
         for (step_list_true, step_list_pred) in zip(y_true, y_pred):
@@ -252,13 +293,13 @@ class FScoreStepDetection(BaseScoreType):
 
         return np.mean(fscore_list)
 
+
 # --------------------------------------
 # 3) Prediction types
 # --------------------------------------
 
 
 class _Predictions(BasePrediction):
-
     def __init__(self, y_pred=None, y_true=None, n_samples=None):
         """Essentially the same as in a regression task, but the prediction is a list not a float."""
         if y_pred is not None:
@@ -267,12 +308,13 @@ class _Predictions(BasePrediction):
             self.y_pred = np.array(y_true, dtype=list)
         elif n_samples is not None:
             # self.n_columns == 0:
-            shape = (n_samples)
+            shape = n_samples
             self.y_pred = np.empty(shape, dtype=list)
             self.y_pred.fill(np.nan)
         else:
             raise ValueError(
-                'Missing init argument: y_pred, y_true, or n_samples')
+                "Missing init argument: y_pred, y_true, or n_samples"
+            )
         self.check_y_pred_dimensions()
 
     @property
@@ -283,7 +325,7 @@ class _Predictions(BasePrediction):
         elif len(self.y_pred.shape) == 2:
             return ~pd.isnull(self.y_pred[:, 0])
         else:
-            raise ValueError('y_pred.shape > 2 is not implemented')
+            raise ValueError("y_pred.shape > 2 is not implemented")
 
     def check_y_pred_dimensions(self):
         pass
@@ -298,6 +340,7 @@ class _Predictions(BasePrediction):
 def make_step_detection():
     return _Predictions
 
+
 # --------------------------------------
 # 4) Ramp problem definition
 # --------------------------------------
@@ -310,11 +353,11 @@ score_types = [FScoreStepDetection(name="F-score (step detection)")]
 
 
 def get_train_data(path="."):
-    return _read_data(path, 'train')
+    return _read_data(path, "train")
 
 
 def get_test_data(path="."):
-    return _read_data(path, 'test')
+    return _read_data(path, "test")
 
 
 def get_cv(X, y):
@@ -323,7 +366,6 @@ def get_cv(X, y):
     not in different folds and test/train sets, therefore the cross-validation is
     stratified according to the `trial_code` attribute.
     """
-    cv = GroupShuffleSplit(
-        n_splits=5, test_size=0.2, random_state=RANDOM_STATE)
+    cv = GroupShuffleSplit(n_splits=5, test_size=0.2, random_state=RANDOM_STATE)
     code_list = [signal.trial_code for signal in X]
     return cv.split(X, y, code_list)
