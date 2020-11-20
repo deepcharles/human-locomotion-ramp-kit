@@ -160,7 +160,7 @@ def _read_data(path, train_or_test="train"):
 
 
 def _check_step_list(step_list):
-    """Some sanity checks. (step_list is assumed to be sorted."""
+    """Some sanity checks."""
     for step in step_list:
         assert len(step) == 2, f"A step consists of a start and an end: {step}."
         start, end = step
