@@ -5,6 +5,7 @@ public/private data as `tar.gz` archives in dedicated OSF folders named after
 the challenge.
 """
 import tarfile
+from zlib import adler32
 from pathlib import Path
 from osfclient.api import OSF
 from osfclient.exceptions import UnauthorizedException
@@ -13,8 +14,14 @@ LOCAL_DATA = Path(__file__).parent / "data"
 
 CHALLENGE_NAME = 'human_locomotion'
 RAMP_FOLDER_CONFIGURATION = {
-    'public': dict(code='t4uf8', archive_name='public.tar.gz'),
-    'private': dict(code='vw8sh', archive_name='private.tar.gz'),
+    'public': dict(
+        code='t4uf8', archive_name='public.tar.gz',
+        data_checksum=2519622839
+    ),
+    'private': dict(
+        code='vw8sh', archive_name='private.tar.gz',
+        data_checksum=1948203346
+    ),
 }
 DOWNLOAD_URL = "https://plmbox.math.cnrs.fr/f/8224e749026747758c56/?dl=1"
 
@@ -52,16 +59,31 @@ def get_one_element(container, name):
     return elements[0]
 
 
-def check_data_exists(private):
-    # TODO: add a checksum for the data folder to check public/private
-    # for now we just check that some files are present in the directory.
-    return LOCAL_DATA.exists and len(list(LOCAL_DATA.glob('*'))) != 0
+def hash_folder(folder_path):
+    """Return the Adler32 hash of an entire directory."""
+    folder = Path(folder_path)
+
+    # Recursively scan the folder and compute a checksum
+    checksum = 1
+    for f in folder.rglob('*'):
+        if f.is_file():
+            checksum = adler32(f.read_bytes(), checksum)
+        else:
+            checksum = adler32(f.name.encode(), checksum)
+
+    return checksum
+
+
+def data_exists(private):
+    folder = 'private' if private else 'public'
+    data_checksum = RAMP_FOLDER_CONFIGURATION[folder]['data_checksum']
+    return data_checksum == hash_folder(LOCAL_DATA)
 
 
 def download_from_osf(private, username=None, password=None):
     "Download and uncompress the data from OSF."
 
-    if not check_data_exists():
+    if not LOCAL_DATA.exists():
         LOCAL_DATA.mkdir(exist_ok=True)
 
         # Get the connection to OSF
@@ -94,9 +116,13 @@ def download_from_osf(private, username=None, password=None):
         print("Removing the archive...", end="", flush=True)
         ARCHIVE_PATH.unlink()
         print("Ok.")
+
     else:
-        print("Data is already present on the system. If you want to reload "
-              f"the data, please delete or move the folder {LOCAL_DATA}.")
+        assert data_exists(private), (
+            f"{LOCAL_DATA} already exists but the checksum does not match. "
+            f"Please try to remove the folder {LOCAL_DATA} and rerun this "
+            "command to get the proper data."
+        )
 
 
 if __name__ == "__main__":
