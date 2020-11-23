@@ -21,7 +21,7 @@ RAMP_FOLDER_CONFIGURATION = {
     ),
     'private': dict(
         code='vw8sh', archive_name='private.tar.gz',
-        data_checksum=2524920146.
+        data_checksum=2915900195
     ),
 }
 DOWNLOAD_URL = "https://plmbox.math.cnrs.fr/f/8224e749026747758c56/?dl=1"
