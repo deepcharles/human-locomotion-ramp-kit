@@ -17,11 +17,11 @@ CHALLENGE_NAME = 'human_locomotion'
 RAMP_FOLDER_CONFIGURATION = {
     'public': dict(
         code='t4uf8', archive_name='public.tar.gz',
-        data_checksum=2519622839
+        data_checksum=1762354359
     ),
     'private': dict(
         code='vw8sh', archive_name='private.tar.gz',
-        data_checksum=1948203346
+        data_checksum=2524920146.
     ),
 }
 DOWNLOAD_URL = "https://plmbox.math.cnrs.fr/f/8224e749026747758c56/?dl=1"
@@ -66,7 +66,7 @@ def hash_folder(folder_path):
 
     # Recursively scan the folder and compute a checksum
     checksum = 1
-    for f in folder.rglob('*'):
+    for f in sorted(folder.rglob('*')):
         if f.is_file():
             checksum = adler32(f.read_bytes(), checksum)
         else:
