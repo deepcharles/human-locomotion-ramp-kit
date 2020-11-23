@@ -4,3 +4,4 @@ numpy
 pandas
 ramp-workflow
 scikit-learn
+osfclient

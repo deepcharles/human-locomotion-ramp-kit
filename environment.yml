@@ -8,5 +8,6 @@ dependencies:
   - pandas
   - pip
   - scikit-learn
+  - osfclient
   - pip:
     - ramp-workflow
