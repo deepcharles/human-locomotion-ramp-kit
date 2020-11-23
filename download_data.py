@@ -5,6 +5,7 @@ public/private data as `tar.gz` archives in dedicated OSF folders named after
 the challenge.
 """
 import tarfile
+import argparse
 from zlib import adler32
 from pathlib import Path
 from osfclient.api import OSF
@@ -74,10 +75,18 @@ def hash_folder(folder_path):
     return checksum
 
 
-def data_exists(private):
+def checksum_data(private, raise_error=False):
     folder = 'private' if private else 'public'
     data_checksum = RAMP_FOLDER_CONFIGURATION[folder]['data_checksum']
-    return data_checksum == hash_folder(LOCAL_DATA)
+    local_checksum = hash_folder(LOCAL_DATA)
+    if raise_error and data_checksum != local_checksum:
+        raise ValueError(
+            f"The checksum does not match. Expecting {data_checksum} but "
+            f"got {local_checksum}. The archive seems corrupted. Try to "
+            f"remove {LOCAL_DATA} and re-run this command."
+        )
+
+    return data_checksum == local_checksum
 
 
 def download_from_osf(private, username=None, password=None):
@@ -86,13 +95,13 @@ def download_from_osf(private, username=None, password=None):
     if not LOCAL_DATA.exists():
         LOCAL_DATA.mkdir(exist_ok=True)
 
+        print("Checking the data URL...", end='', flush=True)
         # Get the connection to OSF
         store, data_config = get_connection_info(
             private, username=username, password=password
         )
 
         # Find the folder in the OSF project
-        print("Checking the data URL...", end='', flush=True)
         challenge_folder = get_one_element(store.folders, CHALLENGE_NAME)
 
         # Find the file to download from the OSF project
@@ -117,16 +126,12 @@ def download_from_osf(private, username=None, password=None):
         ARCHIVE_PATH.unlink()
         print("Ok.")
 
-    else:
-        assert data_exists(private), (
-            f"{LOCAL_DATA} already exists but the checksum does not match. "
-            f"Please try to remove the folder {LOCAL_DATA} and rerun this "
-            "command to get the proper data."
-        )
+    print("Checking the data...", end='', flush=True)
+    checksum_data(private, raise_error=True)
+    print("Ok.")
 
 
 if __name__ == "__main__":
-    import argparse
     parser = argparse.ArgumentParser(
         description=f'Data loader for the {CHALLENGE_NAME} challenge on RAMP.'
     )
