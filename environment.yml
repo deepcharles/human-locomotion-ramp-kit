@@ -14,12 +14,12 @@ dependencies:
   - pytorch
   - scipy
   - lightgbm
-  - gudhi
-  - xgboost
-  - catboost
   - pip
   - pip:
     - ramp-workflow
     - osfclient
     - scikit-multilearn
     - python-louvain
+    - gudhi
+    - xgboost
+    - catboost
