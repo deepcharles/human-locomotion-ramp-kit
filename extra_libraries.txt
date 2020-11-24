@@ -1,6 +1,6 @@
 scipy
-tensorflow-gpu
-torch
+tensorflow-gpu  # tensorflow
+torch  # pytorch
 keras
 lightgbm
 gudhi
