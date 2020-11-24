@@ -8,16 +8,19 @@ dependencies:
   - pandas
   - scikit-learn
 
-  # Extra requirements
+  # Extra requirements conda
   - tensorflow
   - keras
   - pytorch
   - scipy
   - lightgbm
+
   - pip
   - pip:
     - ramp-workflow
     - osfclient
+
+    # Extra requirements pip
     - scikit-multilearn
     - python-louvain
     - gudhi
