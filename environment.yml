@@ -6,8 +6,23 @@ dependencies:
   - matplotlib
   - numpy
   - pandas
-  - pip
   - scikit-learn
-  - osfclient
+
+  # Extra requirements conda
+  - tensorflow
+  - keras
+  - pytorch
+  - scipy
+  - lightgbm
+
+  - pip
   - pip:
     - ramp-workflow
+    - osfclient
+
+    # Extra requirements pip
+    - scikit-multilearn
+    - python-louvain
+    - gudhi
+    - xgboost
+    - catboost
