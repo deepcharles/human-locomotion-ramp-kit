@@ -24,7 +24,6 @@ RAMP_FOLDER_CONFIGURATION = {
         data_checksum=2915900195
     ),
 }
-DOWNLOAD_URL = "https://plmbox.math.cnrs.fr/f/8224e749026747758c56/?dl=1"
 
 
 def get_connection_info(get_private, username=None, password=None):
