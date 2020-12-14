@@ -1,7 +1,7 @@
 name: ramp-human-locomotion
 channels:
   - defaults
-  - conda-forges
+  - conda-forge
 dependencies:
   - jupyter
   - matplotlib
