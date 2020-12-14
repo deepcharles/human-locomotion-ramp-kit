@@ -1,6 +1,7 @@
 name: ramp-human-locomotion
 channels:
   - defaults
+  - conda-forges
 dependencies:
   - jupyter
   - matplotlib
@@ -14,6 +15,9 @@ dependencies:
   - pytorch
   - scipy
   - lightgbm
+  - tslearn
+  - tsfresh
+  - hmmlearn
 
   - pip
   - pip:
