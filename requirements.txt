@@ -5,3 +5,6 @@ pandas
 ramp-workflow
 scikit-learn
 osfclient
+tslearn
+tsfresh
+hmmlearn
